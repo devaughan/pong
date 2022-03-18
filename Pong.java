@@ -30,12 +30,12 @@ public class Pong extends PApplet {
         user = new Paddle();
     
         user.x = 50;
-        user.y = height / 2;
+        user.y = height / 2 - paddleHeight / 2;
 
         comp = new Paddle();
     
         comp.x = width - 50 - comp.width;
-        comp.y = height / 2;
+        comp.y = height / 2 - paddleHeight / 2;
     }
 
     public void draw() {
@@ -47,77 +47,12 @@ public class Pong extends PApplet {
         rect(comp.x, comp.y, comp.width, comp.height);
         circle(ball.x, ball.y, ball.width);
 
+        user();
+        comp();
+        ball();
+        checkGameOver();
+
         println(ball.x + " " + ball.y + " " + user.y + " " + comp.y + " " + keyPressed);
-
-        if (upPressed) {
-            if (user.y > 0)
-            {
-                user.y -= 5;
-            }
-        }
-        if (downPressed) {
-            if (user.y < height - user.height)
-            {
-                user.y += 5;
-            }
-        }
-
-        if (comp.y + paddleHeight * 3 / 8 > ball.y) {
-            compSpeed = -1;
-        }
-        if (comp.y + paddleHeight * 5 / 8 < ball.y) {
-            compSpeed = 1;
-        }
-        if (comp.y < 0) {
-            comp.y = 0;
-            compSpeed = 0;
-        } 
-        if (comp.y + comp.height > height) {
-            comp.y = height - comp.height;
-            compSpeed = 0;
-        }
-
-        comp.y += compSpeed;
-
-        ball.x += ball.xSpeed;
-        ball.y += ball.ySpeed;
-
-        if (ball.x - ball.width / 2 < user.x + 20 && ball.x + ball.width / 2 > user.x + 20) {
-            if (ball.y > user.y && ball.y < user.y + user.height) {
-                ball.ySpeed = paddleHitYSpeed(ball.y - user.y);
-                if (ball.xSpeed < 9) {
-                    ball.xSpeed = (ball.xSpeed - 1) * -1;
-                }
-                else {
-                    ball.xSpeed *= -1;
-                }
-            }
-        }
-        
-        if (ball.x + ball.width / 2 > comp.x && ball.x - ball.width / 2 < comp.x) {
-            if (ball.y > comp.y && ball.y < comp.y + comp.height) {
-                ball.ySpeed = paddleHitYSpeed(ball.y - comp.y);
-                if (ball.xSpeed < 9) {
-                    ball.xSpeed = (ball.xSpeed + 1) * -1; 
-                }
-                else {
-                    ball.xSpeed *= -1;
-                }
-            }
-        }
-
-        if (ball.y - ball.width / 2 < 0 || ball.y + ball.width / 2 > height) {
-            ball.ySpeed *= -1;
-        }
-
-        if (ball.x - ball.width / 2 < 0) {
-            gameover = true;
-            gameoverText = "Comp won";
-        }
-        if (ball.x + ball.width / 2 > width) {
-            gameover = true;
-            gameoverText = "You won!";
-        }
 
         if (gameover) {
             //fill(0, 0, 0);
@@ -142,8 +77,141 @@ public class Pong extends PApplet {
         float height = paddleHeight;
     }
 
-    float paddleHitYSpeed(float height) {
+    // gives new ball Y speed
+    float ballYSpeed(float height) {
         return (height - paddleHeight / 2) / (paddleHeight / 4);
+    }
+
+    // checks collision between ball & paddles
+    boolean intersects(Ball ball, Paddle paddle) {
+        float paddleLeftX = paddle.x;
+        float paddleRightX = paddle.x + paddle.width;
+        float paddleXRange = paddleRightX - paddleLeftX;
+
+        float paddleUpY = paddle.y;
+        float paddleDownY = paddle.y + paddle.height;
+        float paddleYRange = paddleDownY - paddleUpY;
+
+        float ballLeftX = ball.x - ball.width / 2;
+        float ballRightX = ball.x + ball.width / 2;
+        float ballXRange = ballRightX - ballLeftX;
+
+        float ballUpY = ball.y - ball.width / 2;
+        float ballDownY = ball.y + ball.width / 2;
+        float ballYRange = ballDownY - ballUpY;
+
+        boolean xInRange = false;
+        boolean objectsCollide = false;
+
+        // check X range
+        if (paddleXRange < ballXRange) {
+            if (paddleLeftX < ballRightX && paddleLeftX > ballLeftX) {
+                xInRange = true;
+            }
+            else if (paddleRightX < ballRightX && paddleRightX > ballLeftX) {
+                xInRange = true;
+            }
+        }
+        else {
+            if (ballLeftX < paddleRightX && ballLeftX > paddleLeftX) {
+                xInRange = true;
+            }
+            else if (ballRightX < paddleRightX && ballRightX > paddleLeftX) {
+                xInRange = true;
+            }
+        }
+
+        // check Y range
+        if (xInRange) {
+            if (paddleYRange < ballYRange) {
+                if (paddleUpY < ballDownY && paddleUpY > ballUpY) {
+                    objectsCollide = true;
+                }
+                else if (paddleDownY < ballDownY && paddleDownY > ballUpY) {
+                    objectsCollide = true;
+                }
+            }
+            else {
+                if (ballUpY < paddleDownY && ballUpY > paddleUpY) {
+                    objectsCollide = true;
+                }
+                else if (ballDownY < paddleDownY && ballDownY > paddleUpY) {
+                    objectsCollide = true;
+                }
+            }
+        }
+
+        return objectsCollide;
+    } 
+
+    // calculates user position
+    void user() {
+        if (upPressed) {
+            if (user.y > 0) {
+                user.y -= 5;
+            }
+        }
+        if (downPressed) {
+            if (user.y < height - user.height) {
+                user.y += 5;
+            }
+        }
+    }
+
+    // calculates comp position
+    void comp() {
+        if (comp.y + paddleHeight * 3 / 8 > ball.y) {
+            if (comp.y > 0) {
+                comp.y += -1;
+            }
+        }
+        else if (comp.y + paddleHeight * 5 / 8 < ball.y) {
+            if (comp.y + comp.height < height) {
+                comp.y += 1;
+            }
+        }
+    }
+
+    // calculates ball position
+    void ball() {
+
+        if (intersects(ball, user)) {
+            ball.ySpeed = ballYSpeed(ball.y - user.y);
+            if (ball.xSpeed < 9) {
+                ball.xSpeed = (ball.xSpeed - 1) * -1;
+            }
+            else {
+                ball.xSpeed *= -1;
+            }
+        }
+        
+        if (intersects(ball, comp)) {
+            ball.ySpeed = ballYSpeed(ball.y - comp.y);
+            if (ball.xSpeed < 9) {
+                ball.xSpeed = (ball.xSpeed + 1) * -1; 
+            }
+            else {
+                ball.xSpeed *= -1;
+            }
+        }
+
+        if (ball.y - ball.width / 2 < 0 || ball.y + ball.width / 2 > height) {
+            ball.ySpeed *= -1;
+        }
+
+        ball.x += ball.xSpeed;
+        ball.y += ball.ySpeed;
+    }
+
+    void checkGameOver() {
+        if (ball.x - ball.width / 2 < 0) {
+            gameover = true;
+            gameoverText = "Comp won";
+        }
+        if (ball.x + ball.width / 2 > width) {
+            gameover = true;
+            gameoverText = "You won!";
+        }
     }
 
     public void keyPressed() {
